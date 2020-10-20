@@ -34,13 +34,17 @@ const namespace = "mongodb"
 
 // MongodbCollectorOpts is the options of the mongodb collector.
 type MongodbCollectorOpts struct {
-	URI                      string
-	CollectDatabaseMetrics   bool
-	CollectCollectionMetrics bool
-	CollectTopMetrics        bool
-	CollectIndexUsageStats   bool
-	CollectConnPoolStats     bool
-	SuppressCollectShardingStatus    bool
+	URI                           string
+	CollectDatabaseMetrics        bool
+	CollectCollectionMetrics      bool
+	CollectTopMetrics             bool
+	CollectIndexUsageStats        bool
+	CollectConnPoolStats          bool
+	SuppressCollectShardingStatus bool
+	CollectDatabaseCurrentOps     bool
+	CollectDatabaseProfiler       bool
+	DatabaseProfilerLookback      int64
+	DatabaseProfilerThreshold     int64
 }
 
 func (in *MongodbCollectorOpts) toSessionOps() *shared.MongoSessionOpts {
@@ -227,7 +231,7 @@ func (exporter *MongodbCollector) collectMongos(client *mongo.Client, ch chan<- 
 		serverStatus.Export(ch)
 	}
 
-	if !exporter.Opts.SuppressCollectShardingStatus  {
+	if !exporter.Opts.SuppressCollectShardingStatus {
 		log.Debug("Collecting Sharding Status")
 		shardingStatus := mongos.GetShardingStatus(client)
 		if shardingStatus != nil {
@@ -306,16 +310,37 @@ func (exporter *MongodbCollector) collectMongod(client *mongo.Client, ch chan<- 
 			connPoolStats.Export(ch)
 		}
 	}
+
+	if exporter.Opts.CollectDatabaseProfiler {
+		log.Debug("Collecting DatabaseProfiler Metrics")
+		lookback := exporter.Opts.DatabaseProfilerLookback
+		threshold := exporter.Opts.DatabaseProfilerThreshold
+		dbProfilerStats := mongod.GetDatabaseProfilerStats(client, lookback, threshold)
+		if dbProfilerStats != nil {
+			dbProfilerStats.Export(ch)
+		}
+	}
+
+	if exporter.Opts.CollectDatabaseCurrentOps {
+		log.Debug("Collecting DatabaseCurrentOp Metrics")
+		threshold := exporter.Opts.DatabaseProfilerThreshold
+		dbCurrentOpStats := mongod.GetDatabaseCurrentOpStats(client, threshold)
+		if dbCurrentOpStats != nil {
+			dbCurrentOpStats.Export(ch)
+		}
+	}
 }
 
 func (exporter *MongodbCollector) collectMongodReplSet(client *mongo.Client, ch chan<- prometheus.Metric) {
 	exporter.collectMongod(client, ch)
 
-	log.Debug("Collecting ReplSetConf Metrics")
-	replSetConf := mongod.GetReplSetConf(client)
-	if replSetConf != nil {
-		replSetConf.Export(ch)
-	}
+	// 阿里云 mongodb 限制了 replSetGetConfig 命令，所以注释掉了这段代码
+	// 报错：Failed to get replSetGetConfig: (CommandNotFound) replSetGetConfig is forbidden by cloud provider for security reason
+	// log.Debug("Collecting ReplSetConf Metrics")
+	// replSetConf := mongod.GetReplSetConf(client)
+	// if replSetConf != nil {
+	// 	replSetConf.Export(ch)
+	// }
 
 	log.Debug("Collecting Replset Status")
 	replSetStatus := mongod.GetReplSetStatus(client)
