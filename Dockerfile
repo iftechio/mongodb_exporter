@@ -1,5 +1,6 @@
 FROM golang:1.13
 
+ENV GOPROXY "https://goproxy.cn,direct"
 LABEL maintainer="Meik Minks <mminks@inoxio.de>"
 
 WORKDIR /go/src/github.com/percona/mongodb_exporter
