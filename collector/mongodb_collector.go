@@ -34,17 +34,19 @@ const namespace = "mongodb"
 
 // MongodbCollectorOpts is the options of the mongodb collector.
 type MongodbCollectorOpts struct {
-	URI                           string
-	CollectDatabaseMetrics        bool
-	CollectCollectionMetrics      bool
-	CollectTopMetrics             bool
-	CollectIndexUsageStats        bool
-	CollectConnPoolStats          bool
-	SuppressCollectShardingStatus bool
-	CollectDatabaseCurrentOps     bool
-	CollectDatabaseProfiler       bool
-	DatabaseProfilerLookback      int64
-	DatabaseProfilerThreshold     int64
+	URI                                   string
+	CollectDatabaseMetrics                bool
+	CollectCollectionMetrics              bool
+	CollectTopMetrics                     bool
+	CollectIndexUsageStats                bool
+	CollectConnPoolStats                  bool
+	SuppressCollectShardingStatus         bool
+	CollectDatabaseCurrentOps             bool
+	CollectDatabaseProfiler               bool
+	DatabaseProfilerLookback              int64
+	DatabaseProfilerMillisThreshold       int64
+	DatabaseProfilerDocsExaminedThreshold int64
+	DatabaseCurrentOpsMillisThreshold     int64
 }
 
 func (in *MongodbCollectorOpts) toSessionOps() *shared.MongoSessionOpts {
@@ -314,8 +316,10 @@ func (exporter *MongodbCollector) collectMongod(client *mongo.Client, ch chan<- 
 	if exporter.Opts.CollectDatabaseProfiler {
 		log.Debug("Collecting DatabaseProfiler Metrics")
 		lookback := exporter.Opts.DatabaseProfilerLookback
-		threshold := exporter.Opts.DatabaseProfilerThreshold
-		dbProfilerStats := mongod.GetDatabaseProfilerStats(client, lookback, threshold)
+		millisThreshold := exporter.Opts.DatabaseProfilerMillisThreshold
+		docsExaminedThreshold := exporter.Opts.DatabaseProfilerDocsExaminedThreshold
+
+		dbProfilerStats := mongod.GetDatabaseProfilerStats(client, lookback, millisThreshold, docsExaminedThreshold)
 		if dbProfilerStats != nil {
 			dbProfilerStats.Export(ch)
 		}
@@ -323,7 +327,7 @@ func (exporter *MongodbCollector) collectMongod(client *mongo.Client, ch chan<- 
 
 	if exporter.Opts.CollectDatabaseCurrentOps {
 		log.Debug("Collecting DatabaseCurrentOp Metrics")
-		threshold := exporter.Opts.DatabaseProfilerThreshold
+		threshold := exporter.Opts.DatabaseCurrentOpsMillisThreshold
 		dbCurrentOpStats := mongod.GetDatabaseCurrentOpStats(client, threshold)
 		if dbCurrentOpStats != nil {
 			dbCurrentOpStats.Export(ch)
