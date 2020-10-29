@@ -86,7 +86,7 @@ type DatabaseProfilerStats struct {
 }
 
 // GetDatabaseProfilerStats returns profiler stats for all databases
-func GetDatabaseProfilerStats(client *mongo.Client, lookback int64, millis int64) *DatabaseProfilerStatsList {
+func GetDatabaseProfilerStats(client *mongo.Client, lookback int64, millisThreshold int64, docsExaminedThreshold int64) *DatabaseProfilerStatsList {
 	dbStatsList := &DatabaseProfilerStatsList{}
 	dbNames, err := client.ListDatabaseNames(context.TODO(), bson.M{})
 	if err != nil {
@@ -105,8 +105,9 @@ func GetDatabaseProfilerStats(client *mongo.Client, lookback int64, millis int64
 		}
 		from := time.Unix(time.Now().UTC().Unix()-lookback, 0)
 		match := bson.M{"$match": bson.M{
-			"ts":     bson.M{"$gt": from},
-			"millis": bson.M{"$gte": millis},
+			"ts":           bson.M{"$gt": from},
+			"millis":       bson.M{"$gte": millisThreshold},
+			"docsExamined": bson.M{"$gte": docsExaminedThreshold},
 		}}
 		group := bson.M{"$group": bson.M{
 			"_id":   "$ns",
