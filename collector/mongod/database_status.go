@@ -22,6 +22,12 @@ var (
 		Name:      "data_size_bytes",
 		Help:      "The total size in bytes of the uncompressed data held in this database",
 	}, []string{"db"})
+	storageSize = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: Namespace,
+		Subsystem: "db",
+		Name:      "storage_size_bytes",
+		Help:      "The total amount of space allocated to collections in this database for document storage.",
+	}, []string{"db"})
 	collectionsTotal = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: Namespace,
 		Subsystem: "db",
@@ -52,6 +58,7 @@ type DatabaseStatus struct {
 	Name        string `bson:"db,omitempty"`
 	IndexSize   int    `bson:"indexSize,omitempty"`
 	DataSize    int    `bson:"dataSize,omitempty"`
+	StorageSize int    `bson:"storageSize,omitempty"`
 	Collections int    `bson:"collections,omitempty"`
 	Objects     int    `bson:"objects,omitempty"`
 	Indexes     int    `bson:"indexes,omitempty"`
@@ -63,22 +70,24 @@ func (dbStatList *DatabaseStatList) Export(ch chan<- prometheus.Metric) {
 		ls := prometheus.Labels{"db": member.Name}
 		indexSize.With(ls).Set(float64(member.IndexSize))
 		dataSize.With(ls).Set(float64(member.DataSize))
+		storageSize.With(ls).Set(float64(member.StorageSize))
 		collectionsTotal.With(ls).Set(float64(member.Collections))
 		indexesTotal.With(ls).Set(float64(member.Indexes))
 		objectsTotal.With(ls).Set(float64(member.Objects))
 	}
 	indexSize.Collect(ch)
 	dataSize.Collect(ch)
+	storageSize.Collect(ch)
 	collectionsTotal.Collect(ch)
 	indexesTotal.Collect(ch)
 	objectsTotal.Collect(ch)
-
 }
 
 // Describe describes database stats for prometheus
 func (dbStatList *DatabaseStatList) Describe(ch chan<- *prometheus.Desc) {
 	indexSize.Describe(ch)
 	dataSize.Describe(ch)
+	storageSize.Describe(ch)
 	collectionsTotal.Describe(ch)
 	indexesTotal.Describe(ch)
 	objectsTotal.Describe(ch)

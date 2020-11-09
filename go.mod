@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/Masterminds/semver v1.5.0
+	github.com/alecthomas/kong v0.2.11 // indirect
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
 	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883
 	github.com/percona/exporter_shared v0.4.0
